@@ -30,12 +30,6 @@ def load_test_functions(dir_path):
                 test_functions[attr] = func
     return test_functions
 
-# def run_setup(setup_path):
-#     spec = importlib.util.spec_from_file_location("setup", setup_path)
-#     setup_module = importlib.util.module_from_spec(spec)
-#     spec.loader.exec_module(setup_module)
-#     setup_module.main()
-
 def print_banner(message, color=Fore.GREEN):
     term_width = shutil.get_terminal_size().columns
     message_length = len(message)
@@ -88,16 +82,10 @@ def main():
         dir_path = os.path.join(base_dir, dir_name)
         setup_path = os.path.join(dir_path, 'setup.py')
         
-        # print_banner(f" {dir_name} ", Fore.GREEN)
-
-        # Setup the test
-        # run_setup(setup_path)
-        
         print(f"{Fore.BLUE}Loading tests for {dir_name}...")
         test_functions = load_test_functions(dir_path)
         
         all_tests_passed = True
-        
         
         for test_name, test_func in test_functions.items():
             print(f"{Fore.YELLOW}Running test: {test_name}")
@@ -115,7 +103,6 @@ def main():
                 all_tests_passed = False
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
-
 
         if all_tests_passed:
             print_banner(" PASS ", Fore.GREEN)
