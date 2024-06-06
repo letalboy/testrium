@@ -30,11 +30,11 @@ def load_test_functions(dir_path):
                 test_functions[attr] = func
     return test_functions
 
-def run_setup(setup_path):
-    spec = importlib.util.spec_from_file_location("setup", setup_path)
-    setup_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(setup_module)
-    setup_module.main()
+# def run_setup(setup_path):
+#     spec = importlib.util.spec_from_file_location("setup", setup_path)
+#     setup_module = importlib.util.module_from_spec(spec)
+#     spec.loader.exec_module(setup_module)
+#     setup_module.main()
 
 def print_banner(message, color=Fore.GREEN):
     term_width = shutil.get_terminal_size().columns
@@ -88,10 +88,10 @@ def main():
         dir_path = os.path.join(base_dir, dir_name)
         setup_path = os.path.join(dir_path, 'setup.py')
         
-        print_banner(f" {dir_name} ", Fore.GREEN)
+        # print_banner(f" {dir_name} ", Fore.GREEN)
 
         # Setup the test
-        run_setup(setup_path)
+        # run_setup(setup_path)
         
         print(f"{Fore.BLUE}Loading tests for {dir_name}...")
         test_functions = load_test_functions(dir_path)
