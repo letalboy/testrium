@@ -3,6 +3,7 @@ import time
 import importlib.util
 import toml
 from colorama import init, Fore, Style
+import shutil
 
 # Initialize colorama
 init(autoreset=True)
@@ -13,53 +14,122 @@ def load_config(config_path):
         config = toml.load(file)
     return config
 
+def load_test_functions(dir_path):
+    test_functions = {}
+    for filename in os.listdir(dir_path):
+        if filename.startswith('_') or not filename.endswith('.py'):
+            continue
+        module_name = filename[:-3]
+        file_path = os.path.join(dir_path, filename)
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for attr in dir(module):
+            func = getattr(module, attr)
+            if callable(func) and not attr.startswith('_'):
+                test_functions[attr] = func
+    return test_functions
+
 def run_setup(setup_path):
-    print(f"{Fore.YELLOW}Running setup script: {setup_path}")
     spec = importlib.util.spec_from_file_location("setup", setup_path)
     setup_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(setup_module)
     setup_module.main()
 
-def load_test_functions(test_dir):
-    print(f"{Fore.CYAN}Loading test functions from {test_dir}")
-    functions = {}
-    for file_name in os.listdir(test_dir):
-        if file_name.endswith(".py") and file_name != "setup.py":
-            module_name = file_name[:-3]
-            spec = importlib.util.spec_from_file_location(module_name, os.path.join(test_dir, file_name))
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            for attr in dir(module):
-                if callable(getattr(module, attr)) and attr.startswith("test_"):
-                    functions[attr] = getattr(module, attr)
-    return functions
+def print_banner(message, color=Fore.GREEN):
+    term_width = shutil.get_terminal_size().columns
+    message_length = len(message)
+    padding_length = (term_width - message_length) // 2
+    banner = "=" * padding_length + message + "=" * padding_length
+
+    # Ensure the banner fits exactly in the terminal width
+    if len(banner) < term_width:
+        banner += "=" * (term_width - len(banner))
+
+    print(color + banner)
 
 def main():
     base_dir = os.getcwd()
     print(f"{Fore.GREEN}Current working directory: {base_dir}")
-    for dir_name in os.listdir(base_dir):
+
+    dir_names = os.listdir(base_dir)
+    valid_test_dirs = []
+        
+    for dir_name in dir_names:
         dir_path = os.path.join(base_dir, dir_name)
-        if os.path.isdir(dir_path):
-            setup_path = os.path.join(dir_path, 'setup.py')
-            config_path = os.path.join(dir_path, 'config.toml')
+        
+        if not os.path.isdir(dir_path):
+            print(f"{Fore.RED} File: {dir_name} is not a folder")
+            continue
+        
+        setup_path = os.path.join(dir_path, 'setup.py')
+        config_path = os.path.join(dir_path, 'config.toml')
 
-            if os.path.exists(setup_path) and os.path.exists(config_path):
-                print(f"{Fore.MAGENTA}Found test directory: {dir_name}")
-                run_setup(setup_path)
+        if not (os.path.exists(setup_path) and os.path.exists(config_path)):
+            print(f"{Fore.RED} File: {dir_name} invalid test")
+            continue
+        
+        print(f"{Fore.MAGENTA}Found test directory: {dir_name}")
+        valid_test_dirs.append(dir_name)
+        
+    tests_finded = len(valid_test_dirs)
+    
+    if tests_finded > 0:
+        print(f"{Fore.GREEN} Find: {tests_finded:.0f} valid test groups!")
+        for test_group in valid_test_dirs:
+            print(f"{Fore.GREEN} - {test_group}")
+    else:
+        print(f"{Fore.RED} No valid test groups finded!")
+        return
+    
+    # -> RUN THE VALID TESTS:
+    
+    for dir_name in valid_test_dirs:
+        dir_path = os.path.join(base_dir, dir_name)
+        setup_path = os.path.join(dir_path, 'setup.py')
+        
+        print_banner(f" {dir_name} ", Fore.GREEN)
 
-                print(f"{Fore.BLUE}Loading tests for {dir_name}...")
-                test_functions = load_test_functions(dir_path)
-                
-                for test_name, test_func in test_functions.items():
-                    print(f"{Fore.YELLOW}Running test: {test_name}")
-                    start_time = time.time()
-                    try:
-                        test_func()
-                        elapsed_time = time.time() - start_time
-                        print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
-                    except Exception as e:
-                        elapsed_time = time.time() - start_time
-                        print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
+        # Setup the test
+        run_setup(setup_path)
+        
+        print(f"{Fore.BLUE}Loading tests for {dir_name}...")
+        test_functions = load_test_functions(dir_path)
+        
+        all_tests_passed = True
+        
+        
+        for test_name, test_func in test_functions.items():
+            print(f"{Fore.YELLOW}Running test: {test_name}")
+            start_time = time.time()
+            try:
+                if test_name == 'log_test_time':
+                    test_func(dummy_function)  # Pass a dummy function if required
+                elif test_name == 'verify_condition':
+                    test_func(lambda: True)  # Pass a lambda function if required
+                else:
+                    test_func()
+                elapsed_time = time.time() - start_time
+                print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
+            except Exception as e:
+                all_tests_passed = False
+                elapsed_time = time.time() - start_time
+                print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
+
+
+        if all_tests_passed:
+            print_banner(" PASS ", Fore.GREEN)
+        else:
+            print_banner(" FAILURE ", Fore.RED)
+
+# Extra validation step that user migh want to define
+def dummy_function():
+    """
+    - This will allow to define a extra step in the verification
+    for example, read a file and validate if the test was a success.
+    see if the code did what it was suposed to do. etc..
+    """
+    pass
 
 if __name__ == "__main__":
     main()
