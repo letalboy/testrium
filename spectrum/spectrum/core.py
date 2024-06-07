@@ -82,8 +82,6 @@ def main():
         print(f"{Fore.RED} No valid test groups finded!")
         return
     
-    
-    
     # -> RUN THE VALID TESTS:
     
     for dir_name in valid_test_dirs:
