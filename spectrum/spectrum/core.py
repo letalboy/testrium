@@ -8,12 +8,14 @@ import shutil
 # Initialize colorama
 init(autoreset=True)
 
+# Loads the config for each test:
 def load_config(config_path):
     print(f"{Fore.CYAN}Loading config from {config_path}")
     with open(config_path, 'r') as file:
         config = toml.load(file)
     return config
 
+# Loads the test functions:
 def load_test_functions(dir_path):
     test_functions = {}
     for filename in os.listdir(dir_path):
@@ -30,12 +32,14 @@ def load_test_functions(dir_path):
                 test_functions[attr] = func
     return test_functions
 
+# Run setup of the test group
 def run_setup(setup_path):
     spec = importlib.util.spec_from_file_location("setup", setup_path)
     setup_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(setup_module)
     setup_module.main()
 
+# Print the nice Pass or Fail banners
 def print_banner(message, color=Fore.GREEN):
     term_width = shutil.get_terminal_size().columns
     message_length = len(message)
