@@ -58,7 +58,8 @@ def main():
 
     dir_names = os.listdir(base_dir)
     valid_test_dirs = []
-        
+    
+    # -> Discover valid test folders with configs inside
     for dir_name in dir_names:
         dir_path = os.path.join(base_dir, dir_name)
         
@@ -78,6 +79,7 @@ def main():
         
     tests_finded = len(valid_test_dirs)
     
+    # -> Early retun if not find any test:
     if tests_finded > 0:
         print(f"{Fore.GREEN} Find: {tests_finded:.0f} valid test groups!")
         for test_group in valid_test_dirs:
@@ -86,8 +88,12 @@ def main():
         print(f"{Fore.RED} No valid test groups finded!")
         return
     
-    # -> RUN THE VALID TESTS:
+    # TODO >>> Load the tests config toml and the milestones that this tests should reach
+    # TODO >>> Create a meachanism to verify the events when they are required
+    # TODO >>> Clean the events between tests to freash start for every test folder
+    # TODO >>> Find a way to log the milestones completed for each test and with this understand what they relate to
     
+    # -> Run the valid tests:
     for dir_name in valid_test_dirs:
         dir_path = os.path.join(base_dir, dir_name)
         setup_path = os.path.join(dir_path, 'setup.py')
