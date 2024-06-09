@@ -18,7 +18,7 @@ def verify_condition(condition, message="Verification failed"):
 # Events are temporary milestones that we can define to a test 
 # This allows us to log events that we expect the test to complete.
 
-from common.sql_pool import SQLiteConnectionPool
+from .common.sql_pool import SQLiteConnectionPool
 import os
 import pandas as pd
 

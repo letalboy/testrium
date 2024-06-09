@@ -87,10 +87,7 @@ def main():
     else:
         print(f"{Fore.RED} No valid test groups finded!")
         return
-    
-    
-    # TODO >>> Load the tests config toml and the milestones that this tests should reach
-    # TODO >>> Create a meachanism to verify the events when they are required
+
     # TODO >>> Clean the events between tests to freash start for every test folder
     # TODO >>> Find a way to log the milestones completed for each test and with this understand what they relate to
     
@@ -109,9 +106,13 @@ def main():
         units_index = {}
         for unit in units:
             un = configs[f"{unit}"]
-            units_index[un["init"]] = {"name":f"{unit}", "events": f"{un["events"]}"}
+            units_index[un["init"]] = {"name":f"{unit}", "events": f"{un['events']}"}
+            
+            
+        print(f"Units loaded: {units_index}")
         
         # TODO >>> Use the units order to setup the units one by one
+        # TODO >>> Create a meachanism to verify the events when they are required
             
         print(f"{Fore.BLUE}Loading tests for {dir_name}...")
         test_functions = load_test_functions(dir_path)

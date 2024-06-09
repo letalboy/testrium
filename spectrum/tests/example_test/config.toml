@@ -13,6 +13,7 @@ in-except = "Resume" # Resume or Reload
 
 # This is the overal configs of the test group
 ["Configs"]
+units = ["Host", "Client1"]
 debug-modes = ["DEBUG", "INFO", "WARNING", "EXCEPT"]
 test-modes = ["DEBUG"] # Can be "<MODE>", ["<MODE1>", <"MODE2">, ...], "All"
 use-ai = false
