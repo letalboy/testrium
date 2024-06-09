@@ -88,6 +88,7 @@ def main():
         print(f"{Fore.RED} No valid test groups finded!")
         return
     
+    
     # TODO >>> Load the tests config toml and the milestones that this tests should reach
     # TODO >>> Create a meachanism to verify the events when they are required
     # TODO >>> Clean the events between tests to freash start for every test folder
@@ -97,6 +98,20 @@ def main():
     for dir_name in valid_test_dirs:
         dir_path = os.path.join(base_dir, dir_name)
         setup_path = os.path.join(dir_path, 'setup.py')
+        
+        #> Load test configs
+        config_path = os.path.join(dir_path, 'config.toml')
+        configs = load_config(config_path)
+        
+        #> Load Units
+        confs = configs['Configs']
+        units = confs['units']
+        units_index = {}
+        for unit in units:
+            un = configs[f"{unit}"]
+            units_index[un["init"]] = {"name":f"{unit}", "events": f"{un["events"]}"}
+        
+        # TODO >>> Use the units order to setup the units one by one
             
         print(f"{Fore.BLUE}Loading tests for {dir_name}...")
         test_functions = load_test_functions(dir_path)
