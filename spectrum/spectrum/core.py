@@ -91,7 +91,6 @@ def main():
         print(f"{Fore.RED} No valid test groups finded!")
         return
 
-    # TODO >>> Clean the events between tests to freash start for every test folder
     # TODO >>> Find a way to log the milestones completed for each test and with this understand what they relate to
     
     # -> Run the valid tests:
@@ -110,6 +109,7 @@ def main():
         confs = configs['Configs']
         units = confs['units']
         
+        #> Load Units Predefinitions
         total_units = 0
         units_index = {}
         for unit in units:
@@ -127,6 +127,7 @@ def main():
         
         all_tests_passed = True
         
+        #> Run each test found in the test group
         for test_name, test_func in test_functions.items():
             print(f"{Fore.YELLOW}Running test: {test_name}")
             start_time = time.time()
@@ -135,6 +136,7 @@ def main():
                 if test_name == 'log_test_time':
                     test_func(dummy_function)  # Pass a dummy function if required
                 elif test_name == 'verify_condition':
+                    # TODO >>> Use this as a condition to verify if the requirements was completed for the test case
                     test_func(lambda: True)  # Pass a lambda function if required
                 else:
                     test_func()
@@ -145,7 +147,7 @@ def main():
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
         
-        
+        #> Verify Events Completed By The Unit
         for i in range(total_units):
             unit = units_index[i]
             unit_name = unit["name"]
