@@ -4,7 +4,7 @@ import importlib.util
 import toml
 from colorama import init, Fore, Style
 import shutil
-from utils import Events_Manager
+from .utils import Events_Manager
 
 # Initialize colorama
 init(autoreset=True)
@@ -28,6 +28,8 @@ def load_test_functions(dir_path):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         for attr in dir(module):
+            if attr == "Events_Manager":
+                continue
             func = getattr(module, attr)
             if callable(func) and not attr.startswith('_'):
                 test_functions[attr] = func
@@ -94,6 +96,9 @@ def main():
     
     # -> Run the valid tests:
     for dir_name in valid_test_dirs:
+        
+        Events_Manager(Unit="", path=base_dir).drop_events_table()
+        
         dir_path = os.path.join(base_dir, dir_name)
         setup_path = os.path.join(dir_path, 'setup.py')
         
@@ -104,10 +109,13 @@ def main():
         #> Load Units
         confs = configs['Configs']
         units = confs['units']
+        
+        total_units = 0
         units_index = {}
         for unit in units:
             un = configs[f"{unit}"]
             units_index[un["init"]] = {"name":f"{unit}", "events": f"{un['events']}"}
+            total_units += 1
             
         print(f"Units loaded: {units_index}")
         
@@ -136,10 +144,19 @@ def main():
                 all_tests_passed = False
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
-            
-            # TODO >>> Update this unit to verify the steps completed in the end of the tests
-            unit_events = Events_Manager(Unit="Client2", path="Logs").List_Events()
-
+        
+        
+        for i in range(total_units):
+            unit = units_index[i]
+            unit_name = unit["name"]
+            if unit_name == "":
+                continue
+            unit_events = Events_Manager(Unit=unit_name, path=base_dir).List_Events()
+            for event in eval(unit["events"]):
+                if event not in unit_events:
+                    print(f"event: [{event}] was not completed!")
+                    all_tests_passed = False
+                    
         if all_tests_passed:
             print_banner(" PASS ", Fore.GREEN)
         else:
