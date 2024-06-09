@@ -4,6 +4,7 @@ import importlib.util
 import toml
 from colorama import init, Fore, Style
 import shutil
+from utils import Events_Manager
 
 # Initialize colorama
 init(autoreset=True)
@@ -108,7 +109,6 @@ def main():
             un = configs[f"{unit}"]
             units_index[un["init"]] = {"name":f"{unit}", "events": f"{un['events']}"}
             
-            
         print(f"Units loaded: {units_index}")
         
         # TODO >>> Use the units order to setup the units one by one
@@ -122,6 +122,7 @@ def main():
         for test_name, test_func in test_functions.items():
             print(f"{Fore.YELLOW}Running test: {test_name}")
             start_time = time.time()
+            
             try:
                 if test_name == 'log_test_time':
                     test_func(dummy_function)  # Pass a dummy function if required
@@ -135,6 +136,9 @@ def main():
                 all_tests_passed = False
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
+            
+            # TODO >>> Update this unit to verify the steps completed in the end of the tests
+            unit_events = Events_Manager(Unit="Client2", path="Logs").List_Events()
 
         if all_tests_passed:
             print_banner(" PASS ", Fore.GREEN)

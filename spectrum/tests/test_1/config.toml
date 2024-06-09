@@ -1,13 +1,7 @@
 ["Configs"]
-units = ["Host", "Client1"]
+units = ["Primary"]
 
-["Host"]
+["Primary"]
 init = 0
-events=["event1", "event2", "event3"]
-in-except = "Resume" # Resume or Reload
-
-# This will be the events checked for the client
-["Client1"]
-init = 1
-events=["event1", "event2", "event3"]
+events=["Test example completed"]
 in-except = "Resume" # Resume or Reload

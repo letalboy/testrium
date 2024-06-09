@@ -1,9 +1,14 @@
-from spectrum.utils import log_test_time, verify_condition
+from spectrum.utils import log_test_time, verify_condition, Events_Manager
 
 @log_test_time
 def test_example():
     print("Running test_example")
     result = 1 + 1
+    
+    Events_Manager(Unit="Client1", path="Logs").Set_Event(
+        step=f"Test example completed", event_type="Default"
+    )
+    
     verify_condition(result == 2, "1 + 1 should be 2")
 
 @log_test_time

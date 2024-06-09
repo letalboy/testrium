@@ -22,6 +22,8 @@ from .common.sql_pool import SQLiteConnectionPool
 import os
 import pandas as pd
 
+THIS_DIR = os.getcwd()
+
 class Events_Manager:
 
     def __init__(self, Unit:str, path:str):
@@ -29,7 +31,7 @@ class Events_Manager:
         if unit == "*" select all units data
         """
 
-        pool = SQLiteConnectionPool(3, os.path.join(path, "Data.db"))
+        pool = SQLiteConnectionPool(3, os.path.join(THIS_DIR, "Data.db"))
         self.connection = pool.get_connection()
 
         self.Unit = Unit
