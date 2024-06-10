@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+.env/
+
+# Poetry files
+# Generally include poetry.lock, but can be excluded if you prefer not to lock dependencies
+# Exclude if you want to ensure consistent environments across all users
+# Exclude if the project is intended to have varying dependencies
+# Uncomment the following line to exclude poetry.lock
+# poetry.lock
+
+# Pytest cache
+.cache/
+
+# macOS system files
+.DS_Store
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
