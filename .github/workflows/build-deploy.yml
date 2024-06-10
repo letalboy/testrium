@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/master'  # Run only if the release is from the main branch
     runs-on: ubuntu-latest  # Specifies the runner environment
 
     steps:
