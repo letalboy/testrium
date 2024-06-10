@@ -30,18 +30,61 @@ def load_test_functions(dir_path):
         for attr in dir(module):
             if attr == "Events_Manager":
                 continue
+            if attr == "extra_test_validation":
+                continue
+            if attr == "test_results_handler":
+                continue
             func = getattr(module, attr)
             if callable(func) and not attr.startswith('_'):
                 test_functions[attr] = func
     return test_functions
 
+def load_special_callbakcs (dir_path):
+    
+    """
+    This method is used to load the special functions that are:
+    - extra_test_validation
+    - test_results_handler
+    
+    This helper callbacks allows more dinamic patterns to emerge
+    """
+    
+    def get_fn (module, attr):
+        func = getattr(module, attr)
+        if callable(func) and not attr.startswith('_'):
+            return func
+    
+    special_callbacks = {
+        "extra_test_validation": None,
+        "test_results_handler": None,
+    }
+    
+    for filename in os.listdir(dir_path):
+        if filename.startswith('_') or not filename.endswith('.py'):
+            continue
+        module_name = filename[:-3]
+        file_path = os.path.join(dir_path, filename)
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        
+        for attr in dir(module):
+            if attr == "extra_test_validation":
+                special_callbacks[attr] = get_fn(module, attr)
+            elif attr == "test_results_handler":
+                special_callbacks[attr] = get_fn(module, attr)
+            else:
+                continue
+    
+    return special_callbacks
+        
 # Run setup of the test group
 def run_setup(setup_path):
     spec = importlib.util.spec_from_file_location("setup", setup_path)
     setup_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(setup_module)
     setup_module.main()
-
+    
 # Print the nice Pass or Fail banners
 def print_banner(message, color=Fore.GREEN):
     term_width = shutil.get_terminal_size().columns
@@ -128,9 +171,47 @@ def main():
             
         print(f"{Fore.BLUE}Loading tests for {dir_name}...")
         test_functions = load_test_functions(dir_path)
+        special_function = load_special_callbakcs(dir_path)
         
         all_tests_passed = True
         tests_completed = []
+        
+        def handle_exception ():
+            elapsed_time = time.time() - start_time
+            print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
+            tests_completed.append({"name":test_name, "passed":False, "total_time":elapsed_time})
+            
+        def call_tail_function (tests_results:list, events_completed:list, events_missing:list):
+            """
+            This method call the function that will receive the score and information of the test in the end.
+            """
+            
+            #> Callc info
+            total_time = 0
+            passed = True
+            for test_result in tests_results:
+                total_time += test_result["total_time"]
+                if not test_result["passed"]:
+                    passed = False
+                else:
+                    continue
+            
+            #> Call the callback
+            if special_function["test_results_handler"] != None:
+                data = {
+                    "duration": total_time,
+                    "passed": passed,
+                    "tests_results": tests_results,
+                    "events_completed": events_completed,
+                    "events_missing": events_missing,
+                }
+                if special_function["test_results_handler"](data): #> If response == False, test will fail
+                    pass
+                else:
+                    handle_exception()
+            else:
+                #> In the case that the function is not defined, return true to skip
+                return True
         
         #> Run each test found in the test group
         for test_name, test_func in test_functions.items():
@@ -138,6 +219,7 @@ def main():
             start_time = time.time()
             
             try:
+                
                 if test_name == 'log_test_time':
                     with suppress_output(): # TODO >>> Create a CLI arg to disable it when want to show using -v
                         test_func(dummy_function)  # Pass a dummy function if required
@@ -148,16 +230,29 @@ def main():
                 else:
                     with suppress_output():
                         test_func()
+                
+                # > Run extra validation
+                if special_function["extra_test_validation"] != None:
+                    if special_function["extra_test_validation"]():
+                        pass
+                    else:
+                        all_tests_passed = False
+                        handle_exception ()
+                else:
+                    pass
+                
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
                 tests_completed.append({"name":test_name, "passed":True, "total_time":elapsed_time})
+                            
             except Exception as e:
                 all_tests_passed = False
-                elapsed_time = time.time() - start_time
-                print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
-                tests_completed.append({"name":test_name, "passed":False, "total_time":elapsed_time})
-        
+                handle_exception ()
+                
         tests_passed[f"{dir_name}"] = tests_completed
+        
+        events_completed = []
+        events_missing = []
         
         #> Verify Events Completed By The Unit
         for i in range(total_units):
@@ -169,7 +264,15 @@ def main():
             for event in eval(unit["events"]):
                 if event not in unit_events:
                     print(f"event: [{event}] was not completed!")
+                    events_missing.append(event)
                     all_tests_passed = False
+                else:
+                    events_completed.append(event)
+                    continue
+                
+        if not call_tail_function(tests_completed, events_completed, events_missing):
+            print(f"❗{Fore.RED}Tail Function Fail")
+            all_tests_passed = False
                     
         if all_tests_passed:
             print_banner(" PASS ", Fore.GREEN)
@@ -210,9 +313,6 @@ def main():
         else:
             print(f"  💥 {Fore.RED}FAIL!")
             
-        
-        
-
 
 # Extra validation step that user migh want to define
 def dummy_function():
