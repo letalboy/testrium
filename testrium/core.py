@@ -93,6 +93,8 @@ def main():
 
     # TODO >>> Find a way to log the milestones completed for each test and with this understand what they relate to
     
+    tests_passed = {}
+    
     # -> Run the valid tests:
     for dir_name in valid_test_dirs:
         
@@ -126,6 +128,7 @@ def main():
         test_functions = load_test_functions(dir_path)
         
         all_tests_passed = True
+        tests_completed = []
         
         #> Run each test found in the test group
         for test_name, test_func in test_functions.items():
@@ -142,10 +145,14 @@ def main():
                     test_func()
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
+                tests_completed.append({"name":test_name, "passed":True})
             except Exception as e:
                 all_tests_passed = False
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
+                tests_completed.append({"name":test_name, "passed":False})
+        
+        tests_passed[f"{dir_name}"] = tests_completed
         
         #> Verify Events Completed By The Unit
         for i in range(total_units):
@@ -163,6 +170,20 @@ def main():
             print_banner(" PASS ", Fore.GREEN)
         else:
             print_banner(" FAILURE ", Fore.RED)
+            
+    for name, tests in tests_passed.items():
+        print("-="*15)
+        print(f"{Fore.CYAN}{name}:")
+        all_p = True
+        for test in tests:
+            if test["passed"]:
+                print(f"✅ {Fore.GREEN}{test['name']}")
+            else:
+                print(f"🟥 {Fore.RED}{test['name']}")
+                all_p = False
+        if all_p:
+            print(f"🚀 {Fore.GREEN}All Tests Passed!")
+        
 
 # Extra validation step that user migh want to define
 def dummy_function():

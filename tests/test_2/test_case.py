@@ -1,4 +1,4 @@
-from spectrum.utils import log_test_time, verify_condition
+from testrium.utils import log_test_time, verify_condition
 
 @log_test_time
 def test_example():
