@@ -1,4 +1,4 @@
-from testrium.utils import log_test_time, verify_condition, Events_Manager
+from misny.utils import log_test_time, verify_condition, Events_Manager
 import os
 
 THIS_DIR = os.path.dirname(__file__)
