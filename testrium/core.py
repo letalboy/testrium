@@ -54,6 +54,8 @@ def print_banner(message, color=Fore.GREEN):
         banner += "=" * (term_width - len(banner))
 
     print(color + banner)
+    
+from .utils import suppress_output
 
 def main():
     base_dir = os.getcwd()
@@ -137,12 +139,15 @@ def main():
             
             try:
                 if test_name == 'log_test_time':
-                    test_func(dummy_function)  # Pass a dummy function if required
+                    with suppress_output(): # TODO >>> Create a CLI arg to disable it when want to show using -v
+                        test_func(dummy_function)  # Pass a dummy function if required
                 elif test_name == 'verify_condition':
                     # TODO >>> Use this as a condition to verify if the requirements was completed for the test case
-                    test_func(lambda: True)  # Pass a lambda function if required
+                    with suppress_output():
+                        test_func(lambda: True)  # Pass a lambda function if required
                 else:
-                    test_func()
+                    with suppress_output():
+                        test_func()
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
                 tests_completed.append({"name":test_name, "passed":True, "total_time":elapsed_time})

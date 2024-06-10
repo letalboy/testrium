@@ -13,6 +13,23 @@ def verify_condition(condition, message="Verification failed"):
     if not condition:
         raise AssertionError(message)
 
+import contextlib
+import os
+import sys
+
+@contextlib.contextmanager
+def suppress_output():
+    with open(os.devnull, 'w') as devnull:
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = devnull
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
 
 # TODO >>> Add a Events Manager that can save events locally
 # Events are temporary milestones that we can define to a test 
