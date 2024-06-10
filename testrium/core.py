@@ -145,12 +145,12 @@ def main():
                     test_func()
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
-                tests_completed.append({"name":test_name, "passed":True})
+                tests_completed.append({"name":test_name, "passed":True, "total_time":elapsed_time})
             except Exception as e:
                 all_tests_passed = False
                 elapsed_time = time.time() - start_time
                 print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
-                tests_completed.append({"name":test_name, "passed":False})
+                tests_completed.append({"name":test_name, "passed":False, "total_time":elapsed_time})
         
         tests_passed[f"{dir_name}"] = tests_completed
         
@@ -175,15 +175,39 @@ def main():
         print("-="*15)
         print(f"{Fore.CYAN}{name}:")
         all_p = True
+        total_time = 0
+        
+        passed = 0
+        for test in tests:
+            all_s_p = True
+            total_time += test["total_time"]
+            if test["passed"]:
+                passed += 1
+                continue
+            else:
+                all_s_p = False
+                
+        print(f"⚡ Elapsed time: {total_time}")
+        
+        if not all_s_p:
+            print(f"{Fore.RED}{passed}/{len(tests)} Passed!")
+        else:
+            print(f"{Fore.GREEN}{passed}/{len(tests)} Passed!")
+                
         for test in tests:
             if test["passed"]:
-                print(f"✅ {Fore.GREEN}{test['name']}")
+                print(f"  - ✅ {Fore.GREEN}{test['name']}")
             else:
-                print(f"🟥 {Fore.RED}{test['name']}")
+                print(f"  - 🟥 {Fore.RED}{test['name']}")
                 all_p = False
         if all_p:
-            print(f"🚀 {Fore.GREEN}All Tests Passed!")
+            print(f"  🚀 {Fore.GREEN}All Tests Passed!")
+        else:
+            print(f"  💥 {Fore.RED}FAIL!")
+            
         
+        
+
 
 # Extra validation step that user migh want to define
 def dummy_function():
