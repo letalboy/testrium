@@ -5,12 +5,11 @@ def main():
 # -> This functill will be called when the test end, and summary of the test will be in the kwargs
 def end_callback(**kwargs):
     """
-    kwargs contain:
-    - test duration
-    - test that passed
-    - test that failed
-    - events complete
-    - events missing to be complete
+    kwargs contain a list of the following:
+    - test duration 
+    - test result status (passed or failes)
+    - events complete (list)
+    - events missing to be complete (list)
     """
     pass
 
