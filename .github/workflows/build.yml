@@ -2,43 +2,43 @@ name: Upload Python Package
 
 on:
   release:
-    types: [published]
+    types: [published]  # Triggers the workflow on published releases
 
 permissions:
-  contents: read
+  contents: read  # Permissions for accessing repository contents
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Specifies the runner environment
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4  # Checks out the repository code
 
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v3  # Sets up the Python environment
       with:
-        python-version: '3.x'
+        python-version: '3.x'  # Specify the Python version
 
     - name: Install Poetry
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-        export PATH="$HOME/.local/bin:$PATH"
-        poetry --version
+        curl -sSL https://install.python-poetry.org | python3 -  # Installs Poetry
+        export PATH="$HOME/.local/bin:$PATH"  # Adds Poetry to PATH
+        poetry --version  # Verifies Poetry installation
 
     - name: Install dependencies
       run: |
         export PATH="$HOME/.local/bin:$PATH"
-        poetry install --no-root
+        poetry install --no-root  # Installs dependencies without installing the project itself
 
     - name: Build package
       run: |
         export PATH="$HOME/.local/bin:$PATH"
-        poetry build
+        poetry build  # Builds the package
 
     - name: Publish package
       env:
-        POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}  # Passes the PyPI token as an environment variable
       run: |
         export PATH="$HOME/.local/bin:$PATH"
-        poetry publish --build --username __token__ --password $POETRY_PYPI_TOKEN_PYPI
+        poetry publish --build --username __token__ --password $POETRY_PYPI_TOKEN_PYPI  # Publishes the package to PyPI
