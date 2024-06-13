@@ -1,4 +1,5 @@
-from testrium.utils import log_test_time, verify_condition, Events_Manager
+from testrium.common.utils import log_test_time, verify_condition
+from testrium.modules.events import Events_Manager
 import os
 
 THIS_DIR = os.path.dirname(__file__)
