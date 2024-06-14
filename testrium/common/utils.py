@@ -43,3 +43,4 @@ def print_banner(message, color=Fore.GREEN):
         banner += "=" * (term_width - len(banner))
 
     print(color + banner)
+    

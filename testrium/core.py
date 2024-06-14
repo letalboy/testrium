@@ -4,21 +4,14 @@ import importlib.util
 import toml
 from colorama import init, Fore, Style
 from .modules.events import Events_Manager
-from .common.loaders import load_config, load_special_callbakcs, load_test_functions
-from .common.utils import print_banner
-from .common.utils import suppress_output
+from .common.loaders import load_config, load_special_callbakcs, load_test_functions, discover_tests
+from .common.utils import print_banner, suppress_output
 import pandas as pd
 
 # Initialize colorama
 init(autoreset=True)
 
-# Run setup of the test group
-def run_setup(setup_path):
-    spec = importlib.util.spec_from_file_location("setup", setup_path)
-    setup_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(setup_module)
-    setup_module.main()
-    
+
 # Extra validation step that user migh want to define
 def dummy_function():
     """
@@ -28,37 +21,20 @@ def dummy_function():
     """
     pass
 
-def discover_tests (base_dir:str):
+# Run setup of the test group
+def run_setup(setup_path):
+    spec = importlib.util.spec_from_file_location("setup", setup_path)
+    setup_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(setup_module)
+    setup_module.main()
     
-    dir_names = os.listdir(base_dir)
-    valid_test_dirs = []
-    
-    # -> Discover valid test folders with configs inside
-    for dir_name in dir_names:
-        dir_path = os.path.join(base_dir, dir_name)
-        
-        if not os.path.isdir(dir_path):
-            print(f"{Fore.RED} File: {dir_name} is not a folder")
-            continue
-        
-        setup_path = os.path.join(dir_path, 'setup.py')
-        config_path = os.path.join(dir_path, 'config.toml')
 
-        if not (os.path.exists(setup_path) and os.path.exists(config_path)):
-            print(f"{Fore.RED} File: {dir_name} invalid test")
-            continue
-        
-        print(f"{Fore.MAGENTA}Found test directory: {dir_name}")
-        valid_test_dirs.append(dir_name)
-        
-    return valid_test_dirs
-
-def handle_exception (test_name:str, start_time, tests_completed:list, e:str):
+def handle_exception (test_name:str, start_time, e:str) -> dict:
     elapsed_time = time.time() - start_time
     print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
-    tests_completed.append({"name":test_name, "passed":False, "total_time":elapsed_time})
+    return {"name":test_name, "passed":False, "total_time":elapsed_time}
 
-def run_test (base_dir:str, dir_name:str, test_functions, special_function):
+def run_test (base_dir:str, dir_name:str, test_functions, extra_condition_fn):
     """
     This method load the test functions and the special functions,
     the test function is the test that will run and the special function
@@ -105,14 +81,15 @@ def run_test (base_dir:str, dir_name:str, test_functions, special_function):
                 with suppress_output():
                     test_func()
             
-            # > Run extra validation
-            if special_function["extra_test_validation"] != None:
-                if special_function["extra_test_validation"]():
+            
+            if extra_condition_fn != None:
+                if extra_condition_fn():
                     pass
                 else:
-                    handle_exception(test_name, start_time, tests_completed, "Extra validation failed")
+                    tests_completed.append(handle_exception(test_name, start_time, "Extra validation failed"))
             else:
                 pass
+            
             
             elapsed_time = time.time() - start_time
             print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
@@ -120,11 +97,11 @@ def run_test (base_dir:str, dir_name:str, test_functions, special_function):
                         
         except Exception as e:
             all_tests_passed = False
-            handle_exception(test_name, start_time, tests_completed, e)
+            tests_completed.append(handle_exception(test_name, start_time, e))
             
     return all_tests_passed, tests_completed
 
-def call_tail_function (tests_results:list, events_completed:list, events_missing:list, special_function:list):
+def call_tail_function (tests_results:list, events_completed:list, events_missing:list, tail_fn:object):
     """
     This method call the function that will receive the score and information of the test in the end.
     you can use this to make a last verification step that can influentiate if the test passed or not,
@@ -141,23 +118,21 @@ def call_tail_function (tests_results:list, events_completed:list, events_missin
             passed = False
         else:
             continue
+        
+    data = {
+        "duration": total_time,
+        "passed": passed,
+        "tests_results": tests_results,
+        "events_completed": events_completed,
+        "events_missing": events_missing,
+    }
     
-    #> Call the tail callback
-    if special_function["test_results_handler"] != None:
-        data = {
-            "duration": total_time,
-            "passed": passed,
-            "tests_results": tests_results,
-            "events_completed": events_completed,
-            "events_missing": events_missing,
-        }
-        if special_function["test_results_handler"](data): # If response == False, test will fail
-            pass
-        else:
-            handle_exception()
+    if tail_fn(data): # If response == False, test will fail
+        pass
     else:
-        # In the case that the function is not defined, return true to skip
-        return True
+        return False
+    
+    return True
 
 def main():
     base_dir = os.getcwd()
@@ -202,9 +177,11 @@ def main():
         dir_path = os.path.join(base_dir, dir_name)
         
         test_functions = load_test_functions(dir_path)
-        special_function = load_special_callbakcs(dir_path)
+        special_functions = load_special_callbakcs(dir_path)
         
-        all_tests_passed, tests_passed[f"{dir_name}"] = run_test(base_dir, dir_name, test_functions, special_function)
+        # > Run extra validation
+        extra_condition_fn = special_functions["extra_test_validation"]
+        all_tests_passed, tests_passed[f"{dir_name}"] = run_test(base_dir, dir_name, test_functions, extra_condition_fn)
         
         events_completed = []
         events_missing = []
@@ -229,9 +206,14 @@ def main():
                     events_completed.append(event)
                     continue
                 
-        if not call_tail_function(tests_passed[f"{dir_name}"], events_completed, events_missing,special_function):
-            print(f"❗{Fore.RED}Tail Function Fail")
-            all_tests_passed = False
+        #> Call the tail callback
+        tail_fn = special_functions["test_results_handler"]
+        if tail_fn != None:
+            if not call_tail_function(tests_passed[f"{dir_name}"], events_completed, events_missing, tail_fn):
+                print(f"❗{Fore.RED}Tail Function Fail")
+                all_tests_passed = False
+        else:
+            pass
                     
         if all_tests_passed:
             print_banner(" PASS ", Fore.GREEN)

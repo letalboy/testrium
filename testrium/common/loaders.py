@@ -71,3 +71,28 @@ def load_special_callbakcs (dir_path):
                 continue
     
     return special_callbacks
+
+def discover_tests (base_dir:str):
+    
+    dir_names = os.listdir(base_dir)
+    valid_test_dirs = []
+    
+    # -> Discover valid test folders with configs inside
+    for dir_name in dir_names:
+        dir_path = os.path.join(base_dir, dir_name)
+        
+        if not os.path.isdir(dir_path):
+            print(f"{Fore.RED} File: {dir_name} is not a folder")
+            continue
+        
+        setup_path = os.path.join(dir_path, 'setup.py')
+        config_path = os.path.join(dir_path, 'config.toml')
+
+        if not (os.path.exists(setup_path) and os.path.exists(config_path)):
+            print(f"{Fore.RED} File: {dir_name} invalid test")
+            continue
+        
+        print(f"{Fore.MAGENTA}Found test directory: {dir_name}")
+        valid_test_dirs.append(dir_name)
+        
+    return valid_test_dirs
