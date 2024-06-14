@@ -59,11 +59,26 @@ def handle_exception (test_name:str, start_time, tests_completed:list, e:str):
     tests_completed.append({"name":test_name, "passed":False, "total_time":elapsed_time})
 
 def run_test (base_dir:str, dir_name:str, test_functions, special_function):
+    """
+    This method load the test functions and the special functions,
+    the test function is the test that will run and the special function
+    is a extra verification that can be added to run in the end. 
+    
+    This functions will return:
+    - all_tests_passed: boolean
+    - test_complete: list
+    
+    The test complete is a list of this:
+    
+    ```python
+    {"name":test_name, "passed":True, "total_time":elapsed_time}
+    ```
+    
+    This dictionary list contain basically the resume of each test completed    
+    """
     
     Events_Manager(Unit="", path=base_dir).drop_events_table()
         
-    # setup_path = os.path.join(dir_path, 'setup.py')
-    
     # TODO >>> Use the units order to setup the units one by one
     # TODO >>> Create a meachanism to verify the events when they are required
         
@@ -112,9 +127,12 @@ def run_test (base_dir:str, dir_name:str, test_functions, special_function):
 def call_tail_function (tests_results:list, events_completed:list, events_missing:list, special_function:list):
     """
     This method call the function that will receive the score and information of the test in the end.
+    you can use this to make a last verification step that can influentiate if the test passed or not,
+    by return True or False in the end you can fail the test if you want to or send back True, that will
+    not fail the test if if was not failed before.
     """
     
-    #> Callc info
+    #> Verify if all fail or passed, and calc test total time to run.
     total_time = 0
     passed = True
     for test_result in tests_results:
@@ -124,7 +142,7 @@ def call_tail_function (tests_results:list, events_completed:list, events_missin
         else:
             continue
     
-    #> Call the callback
+    #> Call the tail callback
     if special_function["test_results_handler"] != None:
         data = {
             "duration": total_time,
@@ -133,12 +151,12 @@ def call_tail_function (tests_results:list, events_completed:list, events_missin
             "events_completed": events_completed,
             "events_missing": events_missing,
         }
-        if special_function["test_results_handler"](data): #> If response == False, test will fail
+        if special_function["test_results_handler"](data): # If response == False, test will fail
             pass
         else:
             handle_exception()
     else:
-        #> In the case that the function is not defined, return true to skip
+        # In the case that the function is not defined, return true to skip
         return True
 
 def main():
@@ -149,7 +167,6 @@ def main():
     
     # -> Early retun if not find any test:
     tests_finded = len(valid_test_dirs)
-    
     if tests_finded > 0:
         print(f"{Fore.GREEN} Find: {tests_finded:.0f} valid test groups!")
         for test_group in valid_test_dirs:
@@ -220,8 +237,10 @@ def main():
             print_banner(" PASS ", Fore.GREEN)
         else:
             print_banner(" FAILURE ", Fore.RED)
-            
+    
+    # -> SHOW RESUME ON SCREEN:
     for name, tests in tests_passed.items():
+        
         print("-="*15)
         print(f"{Fore.CYAN}{name}:")
         all_p = True
@@ -238,7 +257,6 @@ def main():
                 all_s_p = False
                 
         print(f"⚡ Elapsed time: {total_time}")
-        
         if not all_s_p:
             print(f"{Fore.RED}{passed}/{len(tests)} Passed!")
         else:
@@ -250,13 +268,12 @@ def main():
             else:
                 print(f"  - 🟥 {Fore.RED}{test['name']}")
                 all_p = False
+                
         if all_p:
             print(f"  🚀 {Fore.GREEN}All Tests Passed!")
         else:
             print(f"  💥 {Fore.RED}FAIL!")
             
-
-
 
 if __name__ == "__main__":
     main()
