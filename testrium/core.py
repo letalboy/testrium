@@ -18,11 +18,18 @@ def run_setup(setup_path):
     setup_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(setup_module)
     setup_module.main()
+    
+# Extra validation step that user migh want to define
+def dummy_function():
+    """
+    - This will allow to define a extra step in the verification
+    for example, read a file and validate if the test was a success.
+    see if the code did what it was suposed to do. etc..
+    """
+    pass
 
-def main():
-    base_dir = os.getcwd()
-    print(f"{Fore.GREEN}Current working directory: {base_dir}")
-
+def discover_tests (base_dir:str):
+    
     dir_names = os.listdir(base_dir)
     valid_test_dirs = []
     
@@ -44,9 +51,105 @@ def main():
         print(f"{Fore.MAGENTA}Found test directory: {dir_name}")
         valid_test_dirs.append(dir_name)
         
-    tests_finded = len(valid_test_dirs)
+    return valid_test_dirs
+
+def handle_exception (test_name:str, start_time, tests_completed:list, e:str):
+    elapsed_time = time.time() - start_time
+    print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
+    tests_completed.append({"name":test_name, "passed":False, "total_time":elapsed_time})
+
+def run_test (base_dir:str, dir_name:str, test_functions, special_function):
+    
+    Events_Manager(Unit="", path=base_dir).drop_events_table()
+        
+    # setup_path = os.path.join(dir_path, 'setup.py')
+    
+    # TODO >>> Use the units order to setup the units one by one
+    # TODO >>> Create a meachanism to verify the events when they are required
+        
+    print(f"{Fore.BLUE}Loading tests for {dir_name}...")
+    
+    all_tests_passed = True
+    tests_completed = []
+    
+    #> Run each test found in the test group
+    for test_name, test_func in test_functions.items():
+        print(f"{Fore.YELLOW}Running test: {test_name}")
+        start_time = time.time()
+        
+        try:
+            
+            if test_name == 'log_test_time':
+                with suppress_output(): # TODO >>> Create a CLI arg to disable it when want to show using -v
+                    test_func(dummy_function)  # Pass a dummy function if required
+            elif test_name == 'verify_condition':
+                # TODO >>> Use this as a condition to verify if the requirements was completed for the test case
+                with suppress_output():
+                    test_func(lambda: True)  # Pass a lambda function if required
+            else:
+                with suppress_output():
+                    test_func()
+            
+            # > Run extra validation
+            if special_function["extra_test_validation"] != None:
+                if special_function["extra_test_validation"]():
+                    pass
+                else:
+                    handle_exception(test_name, start_time, tests_completed, "Extra validation failed")
+            else:
+                pass
+            
+            elapsed_time = time.time() - start_time
+            print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
+            tests_completed.append({"name":test_name, "passed":True, "total_time":elapsed_time})
+                        
+        except Exception as e:
+            all_tests_passed = False
+            handle_exception(test_name, start_time, tests_completed, e)
+            
+    return all_tests_passed, tests_completed
+
+def call_tail_function (tests_results:list, events_completed:list, events_missing:list, special_function:list):
+    """
+    This method call the function that will receive the score and information of the test in the end.
+    """
+    
+    #> Callc info
+    total_time = 0
+    passed = True
+    for test_result in tests_results:
+        total_time += test_result["total_time"]
+        if not test_result["passed"]:
+            passed = False
+        else:
+            continue
+    
+    #> Call the callback
+    if special_function["test_results_handler"] != None:
+        data = {
+            "duration": total_time,
+            "passed": passed,
+            "tests_results": tests_results,
+            "events_completed": events_completed,
+            "events_missing": events_missing,
+        }
+        if special_function["test_results_handler"](data): #> If response == False, test will fail
+            pass
+        else:
+            handle_exception()
+    else:
+        #> In the case that the function is not defined, return true to skip
+        return True
+
+def main():
+    base_dir = os.getcwd()
+    print(f"{Fore.GREEN}Current working directory: {base_dir}")
+
+    valid_test_dirs = discover_tests(base_dir)
     
     # -> Early retun if not find any test:
+    tests_finded = len(valid_test_dirs)
+    
     if tests_finded > 0:
         print(f"{Fore.GREEN} Find: {tests_finded:.0f} valid test groups!")
         for test_group in valid_test_dirs:
@@ -62,14 +165,8 @@ def main():
     # -> Run the valid tests:
     for dir_name in valid_test_dirs:
         
-        Events_Manager(Unit="", path=base_dir).drop_events_table()
-        
-        dir_path = os.path.join(base_dir, dir_name)
-        setup_path = os.path.join(dir_path, 'setup.py')
-        
-        #> Load test configs
-        config_path = os.path.join(dir_path, 'config.toml')
-        configs = load_config(config_path)
+         #> Load test configs
+        configs = load_config(os.path.join(dir_name, 'config.toml'))
         
         #> Load Units
         confs = configs['Configs']
@@ -85,90 +182,12 @@ def main():
             
         print(f"Units loaded: {units_index}")
         
-        # TODO >>> Use the units order to setup the units one by one
-        # TODO >>> Create a meachanism to verify the events when they are required
-            
-        print(f"{Fore.BLUE}Loading tests for {dir_name}...")
+        dir_path = os.path.join(base_dir, dir_name)
+        
         test_functions = load_test_functions(dir_path)
         special_function = load_special_callbakcs(dir_path)
         
-        all_tests_passed = True
-        tests_completed = []
-        
-        def handle_exception ():
-            elapsed_time = time.time() - start_time
-            print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
-            tests_completed.append({"name":test_name, "passed":False, "total_time":elapsed_time})
-            
-        def call_tail_function (tests_results:list, events_completed:list, events_missing:list):
-            """
-            This method call the function that will receive the score and information of the test in the end.
-            """
-            
-            #> Callc info
-            total_time = 0
-            passed = True
-            for test_result in tests_results:
-                total_time += test_result["total_time"]
-                if not test_result["passed"]:
-                    passed = False
-                else:
-                    continue
-            
-            #> Call the callback
-            if special_function["test_results_handler"] != None:
-                data = {
-                    "duration": total_time,
-                    "passed": passed,
-                    "tests_results": tests_results,
-                    "events_completed": events_completed,
-                    "events_missing": events_missing,
-                }
-                if special_function["test_results_handler"](data): #> If response == False, test will fail
-                    pass
-                else:
-                    handle_exception()
-            else:
-                #> In the case that the function is not defined, return true to skip
-                return True
-        
-        #> Run each test found in the test group
-        for test_name, test_func in test_functions.items():
-            print(f"{Fore.YELLOW}Running test: {test_name}")
-            start_time = time.time()
-            
-            try:
-                
-                if test_name == 'log_test_time':
-                    with suppress_output(): # TODO >>> Create a CLI arg to disable it when want to show using -v
-                        test_func(dummy_function)  # Pass a dummy function if required
-                elif test_name == 'verify_condition':
-                    # TODO >>> Use this as a condition to verify if the requirements was completed for the test case
-                    with suppress_output():
-                        test_func(lambda: True)  # Pass a lambda function if required
-                else:
-                    with suppress_output():
-                        test_func()
-                
-                # > Run extra validation
-                if special_function["extra_test_validation"] != None:
-                    if special_function["extra_test_validation"]():
-                        pass
-                    else:
-                        all_tests_passed = False
-                        handle_exception ()
-                else:
-                    pass
-                
-                elapsed_time = time.time() - start_time
-                print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
-                tests_completed.append({"name":test_name, "passed":True, "total_time":elapsed_time})
-                            
-            except Exception as e:
-                all_tests_passed = False
-                handle_exception ()
-                
-        tests_passed[f"{dir_name}"] = tests_completed
+        all_tests_passed, tests_passed[f"{dir_name}"] = run_test(base_dir, dir_name, test_functions, special_function)
         
         events_completed = []
         events_missing = []
@@ -193,7 +212,7 @@ def main():
                     events_completed.append(event)
                     continue
                 
-        if not call_tail_function(tests_completed, events_completed, events_missing):
+        if not call_tail_function(tests_passed[f"{dir_name}"], events_completed, events_missing,special_function):
             print(f"❗{Fore.RED}Tail Function Fail")
             all_tests_passed = False
                     
@@ -237,14 +256,7 @@ def main():
             print(f"  💥 {Fore.RED}FAIL!")
             
 
-# Extra validation step that user migh want to define
-def dummy_function():
-    """
-    - This will allow to define a extra step in the verification
-    for example, read a file and validate if the test was a success.
-    see if the code did what it was suposed to do. etc..
-    """
-    pass
+
 
 if __name__ == "__main__":
     main()
