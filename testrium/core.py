@@ -275,7 +275,7 @@ def main():
                     continue
 
         # > Call the tail callback
-        tail_fn = special_functions["tests_results_handler"]
+        tail_fn = special_functions["tests_results"]
         if tail_fn != None:
             if not call_tail_function(
                 tests_passed[f"{dir_name}"], events_completed, events_missing, tail_fn

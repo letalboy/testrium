@@ -6,12 +6,12 @@ def main():
     # Setup logic here
 
     while True:
-        print("setup running")
+        print("setup running\n\n")
         sleep(1)
 
 
 # -> This functill will be called when the test end, and summary of the test will be in the kwargs,
-def tests_results(**kwargs):
+def tests_results(*args, **kwargs):
     """
     kwargs contain a list of the following:
     - test duration

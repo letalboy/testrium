@@ -53,7 +53,7 @@ def load_special_callbakcs(dir_path):
 
     special_callbacks = {
         "validate_test": None,
-        "tests_results_handler": None,
+        "tests_results": None,
     }
 
     for filename in os.listdir(dir_path):
@@ -69,7 +69,7 @@ def load_special_callbakcs(dir_path):
             if attr == "validate_test":
                 special_callbacks[attr] = get_fn(module, attr)
 
-            elif attr == "tests_results_handler":
+            elif attr == "tests_results":
                 special_callbacks[attr] = get_fn(module, attr)
 
             else:
