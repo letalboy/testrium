@@ -1,12 +1,19 @@
 import os
+from posixpath import dirname
 import time
 import importlib.util
 import toml
 from colorama import init, Fore, Style
 from .modules.events import Events_Manager
-from .common.loaders import load_config, load_special_callbakcs, load_test_functions, discover_tests
+from .common.loaders import (
+    load_config,
+    load_special_callbakcs,
+    load_test_functions,
+    discover_tests,
+)
 from .common.utils import print_banner, suppress_output
 import pandas as pd
+from multiprocessing import Process, Event, Manager
 
 # Initialize colorama
 init(autoreset=True)
@@ -21,95 +28,145 @@ def dummy_function():
     """
     pass
 
+
 # Run setup of the test group
 def run_setup(setup_path):
+    print(f"setup_path: {setup_path}")
     spec = importlib.util.spec_from_file_location("setup", setup_path)
     setup_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(setup_module)
     setup_module.main()
-    
 
-def handle_exception (test_name:str, start_time, e:str) -> dict:
+
+# t1 = Process(target=self.initializer, args=())
+# t2 = Process(target=senders.send_some_data, args=())
+# t3 = Process(target=self.monitor_stop_event, args=())
+#
+# t1.start()
+# time.sleep(5)
+# t2.start()
+# t3.start()
+#
+# t3.join()
+#
+# time.sleep(5)
+#
+# # PID is the process ID of the process you want to send the signal to.
+# # You would typically get this from the 'pid' attribute of a process.
+# os.kill(t1.pid, signal.SIGINT)
+#
+# t1.join()  # Wait for the process to finish
+# t2.join()
+
+
+def handle_exception(test_name: str, start_time, e: str) -> dict:
     elapsed_time = time.time() - start_time
     print(f"{Fore.RED}{test_name}: FAILED in {elapsed_time:.2f} seconds\nError: {e}")
-    return {"name":test_name, "passed":False, "total_time":elapsed_time}
+    return {"name": test_name, "passed": False, "total_time": elapsed_time}
 
-def run_test (base_dir:str, dir_name:str, test_functions, extra_condition_fn):
+
+def run_test(base_dir: str, dir_name: str, test_functions, extra_condition_fn):
     """
     This method load the test functions and the special functions,
     the test function is the test that will run and the special function
-    is a extra verification that can be added to run in the end. 
-    
+    is a extra verification that can be added to run in the end.
+
     This functions will return:
     - all_tests_passed: boolean
     - test_complete: list
-    
+
     The test complete is a list of this:
-    
+
     ```python
     {"name":test_name, "passed":True, "total_time":elapsed_time}
     ```
-    
-    This dictionary list contain basically the resume of each test completed    
+
+    This dictionary list contain basically the resume of each test completed
     """
-    
+
+    print("Hello")
     Events_Manager(Unit="", path=base_dir).drop_events_table()
-        
+
+    setup_path = os.path.join(base_dir, dir_name, "setup.py")
+
+    if os.path.exists(setup_path):
+        t1 = Process(target=run_setup, args=(setup_path,))
+        t1.daemon = True  # Set the process as a daemon
+        t1.start()
+
     # TODO >>> Use the units order to setup the units one by one
     # TODO >>> Create a meachanism to verify the events when they are required
-        
+
     print(f"{Fore.BLUE}Loading tests for {dir_name}...")
-    
+
     all_tests_passed = True
     tests_completed = []
-    
-    #> Run each test found in the test group
+
+    # > Run each test found in the test group
     for test_name, test_func in test_functions.items():
         print(f"{Fore.YELLOW}Running test: {test_name}")
         start_time = time.time()
-        
+
         try:
-            
-            if test_name == 'log_test_time':
-                with suppress_output(): # TODO >>> Create a CLI arg to disable it when want to show using -v
+            if test_name == "log_test_time":
+                with suppress_output():  # TODO >>> Create a CLI arg to disable it when want to show using -v
                     test_func(dummy_function)  # Pass a dummy function if required
-            elif test_name == 'verify_condition':
+            elif test_name == "verify_condition":
                 # TODO >>> Use this as a condition to verify if the requirements was completed for the test case
                 with suppress_output():
                     test_func(lambda: True)  # Pass a lambda function if required
             else:
                 with suppress_output():
                     test_func()
-            
-            
+
             if extra_condition_fn != None:
-                if extra_condition_fn():
+                if extra_condition_fn(test_name):
                     pass
                 else:
-                    tests_completed.append(handle_exception(test_name, start_time, "Extra validation failed"))
+                    tests_completed.append(
+                        handle_exception(
+                            test_name, start_time, "Extra validation failed"
+                        )
+                    )
             else:
                 pass
-            
-            
+
             elapsed_time = time.time() - start_time
             print(f"{Fore.GREEN}{test_name}: PASSED in {elapsed_time:.2f} seconds")
-            tests_completed.append({"name":test_name, "passed":True, "total_time":elapsed_time})
-                        
+            tests_completed.append(
+                {"name": test_name, "passed": True, "total_time": elapsed_time}
+            )
+
         except Exception as e:
             all_tests_passed = False
             tests_completed.append(handle_exception(test_name, start_time, e))
-            
+
+    if os.path.exists(setup_path):
+        t1.kill()
+
+    # -> Handle the case where the setup fails and none of the tests has the change to run
+    if len(tests_completed) == 0:
+        for test_name, test_func in test_functions.items():
+            tests_completed.append(
+                handle_exception(
+                    test_name, time.time(), "Setup so all tests was skipped"
+                )
+            )
+
     return all_tests_passed, tests_completed
 
-def call_tail_function (tests_results:list, events_completed:list, events_missing:list, tail_fn:object):
+
+def call_tail_function(
+    tests_results: list, events_completed: list, events_missing: list, tail_fn: object
+):
     """
     This method call the function that will receive the score and information of the test in the end.
     you can use this to make a last verification step that can influentiate if the test passed or not,
     by return True or False in the end you can fail the test if you want to or send back True, that will
     not fail the test if if was not failed before.
     """
-    
-    #> Verify if all fail or passed, and calc test total time to run.
+
+    # > Verify if all fail or passed, and calc test total time to run.
     total_time = 0
     passed = True
     for test_result in tests_results:
@@ -118,7 +175,7 @@ def call_tail_function (tests_results:list, events_completed:list, events_missin
             passed = False
         else:
             continue
-        
+
     data = {
         "duration": total_time,
         "passed": passed,
@@ -126,20 +183,21 @@ def call_tail_function (tests_results:list, events_completed:list, events_missin
         "events_completed": events_completed,
         "events_missing": events_missing,
     }
-    
-    if tail_fn(data): # If response == False, test will fail
+
+    if tail_fn(data):  # If response == False, test will fail
         pass
     else:
         return False
-    
+
     return True
+
 
 def main():
     base_dir = os.getcwd()
     print(f"{Fore.GREEN}Current working directory: {base_dir}")
 
     valid_test_dirs = discover_tests(base_dir)
-    
+
     # -> Early retun if not find any test:
     tests_finded = len(valid_test_dirs)
     if tests_finded > 0:
@@ -151,50 +209,60 @@ def main():
         return
 
     # TODO >>> Find a way to log the milestones completed for each test and with this understand what they relate to
-    
+
     tests_passed = {}
-    
+
     # -> Run the valid tests:
     for dir_name in valid_test_dirs:
-        
-         #> Load test configs
-        configs = load_config(os.path.join(dir_name, 'config.toml'))
-        
-        #> Load Units
-        confs = configs['Configs']
-        units = confs['units']
-        
-        #> Load Units Predefinitions
+        # TODO >>> Enhance the config loading to have a structure verification
+        # TODO >>> Add option to disble a test if want to using somehting like enable: False for example
+
+        # > Load test configs
+        configs = load_config(os.path.join(dir_name, "config.toml"))
+
+        # > Load Units
+        confs = configs["Configs"]
+        units = confs["units"]
+
+        # > Load Units Predefinitions
         total_units = 0
         units_index = {}
         for unit in units:
             un = configs[f"{unit}"]
-            units_index[un["init"]] = {"name":f"{unit}", "events": f"{un['events']}"}
+            units_index[un["init"]] = {"name": f"{unit}", "events": f"{un['events']}"}
             total_units += 1
-            
+
         print(f"Units loaded: {units_index}")
-        
+
         dir_path = os.path.join(base_dir, dir_name)
-        
+
         test_functions = load_test_functions(dir_path)
         special_functions = load_special_callbakcs(dir_path)
-        
+
         # > Run extra validation
-        extra_condition_fn = special_functions["extra_test_validation"]
-        all_tests_passed, tests_passed[f"{dir_name}"] = run_test(base_dir, dir_name, test_functions, extra_condition_fn)
-        
+        extra_condition_fn = special_functions["validate_test"]
+        all_tests_passed, tests_passed[f"{dir_name}"] = run_test(
+            base_dir, dir_name, test_functions, extra_condition_fn
+        )
+
         events_completed = []
         events_missing = []
-        
-        #> Verify Events Completed By The Unit
+
+        # > Verify Events Completed By The Unit
         for i in range(total_units):
             unit = units_index[i]
             unit_name = unit["name"]
             if unit_name == "":
                 continue
-            
-            unit_events = pd.DataFrame.from_dict(Events_Manager(Unit=unit_name, path=base_dir).List_Events()).loc[:, "StepCompleted"].to_list()
-            
+
+            unit_events = (
+                pd.DataFrame.from_dict(
+                    Events_Manager(Unit=unit_name, path=base_dir).List_Events()
+                )
+                .loc[:, "StepCompleted"]
+                .to_list()
+            )
+
             print(f"{unit_events}")
             for event in eval(unit["events"]):
                 print(f"Event: {event}")
@@ -205,29 +273,30 @@ def main():
                 else:
                     events_completed.append(event)
                     continue
-                
-        #> Call the tail callback
-        tail_fn = special_functions["test_results_handler"]
+
+        # > Call the tail callback
+        tail_fn = special_functions["tests_results_handler"]
         if tail_fn != None:
-            if not call_tail_function(tests_passed[f"{dir_name}"], events_completed, events_missing, tail_fn):
+            if not call_tail_function(
+                tests_passed[f"{dir_name}"], events_completed, events_missing, tail_fn
+            ):
                 print(f"❗{Fore.RED}Tail Function Fail")
                 all_tests_passed = False
         else:
             pass
-                    
+
         if all_tests_passed:
             print_banner(" PASS ", Fore.GREEN)
         else:
             print_banner(" FAILURE ", Fore.RED)
-    
+
     # -> SHOW RESUME ON SCREEN:
     for name, tests in tests_passed.items():
-        
-        print("-="*15)
+        print("-=" * 15)
         print(f"{Fore.CYAN}{name}:")
         all_p = True
         total_time = 0
-        
+
         passed = 0
         for test in tests:
             all_s_p = True
@@ -237,25 +306,25 @@ def main():
                 continue
             else:
                 all_s_p = False
-                
+
         print(f"⚡ Elapsed time: {total_time}")
         if not all_s_p:
             print(f"{Fore.RED}{passed}/{len(tests)} Passed!")
         else:
             print(f"{Fore.GREEN}{passed}/{len(tests)} Passed!")
-                
+
         for test in tests:
             if test["passed"]:
                 print(f"  - ✅ {Fore.GREEN}{test['name']}")
             else:
                 print(f"  - 🟥 {Fore.RED}{test['name']}")
                 all_p = False
-                
+
         if all_p:
             print(f"  🚀 {Fore.GREEN}All Tests Passed!")
         else:
             print(f"  💥 {Fore.RED}FAIL!")
-            
+
 
 if __name__ == "__main__":
     main()
