@@ -6,7 +6,7 @@ def main():
     # Setup logic here
 
     while True:
-        print("setup running\n\n")
+        print("setup running")
         sleep(1)
 
 

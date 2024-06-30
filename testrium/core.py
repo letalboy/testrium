@@ -14,6 +14,7 @@ from .common.loaders import (
 from .common.utils import print_banner, suppress_output
 import pandas as pd
 from multiprocessing import Process, Event, Manager
+import sys
 
 # Initialize colorama
 init(autoreset=True)
@@ -29,13 +30,23 @@ def dummy_function():
     pass
 
 
-# Run setup of the test group
 def run_setup(setup_path):
-    print(f"setup_path: {setup_path}")
-    spec = importlib.util.spec_from_file_location("setup", setup_path)
-    setup_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(setup_module)
-    setup_module.main()
+    try:
+        print(setup_path)
+        sys.stdout.flush()  # Ensure the output is flushed immediately
+        module_name = "setup_module"
+        spec = importlib.util.spec_from_file_location(module_name, setup_path)
+        if spec and spec.loader:
+            setup_module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = setup_module
+            spec.loader.exec_module(setup_module)
+            setup_module.main()
+        else:
+            print(f"Could not load module from {setup_path}")
+            sys.stdout.flush()  # Ensure the output is flushed immediately
+    except Exception as e:
+        print(f"An error occurred in run_setup: {e}")
+        sys.stdout.flush()  # Ensure the output is flushed immediately
 
 
 # t1 = Process(target=self.initializer, args=())
@@ -84,7 +95,6 @@ def run_test(base_dir: str, dir_name: str, test_functions, extra_condition_fn):
     This dictionary list contain basically the resume of each test completed
     """
 
-    print("Hello")
     Events_Manager(Unit="", path=base_dir).drop_events_table()
 
     setup_path = os.path.join(base_dir, dir_name, "setup.py")
@@ -93,6 +103,8 @@ def run_test(base_dir: str, dir_name: str, test_functions, extra_condition_fn):
         t1 = Process(target=run_setup, args=(setup_path,))
         t1.daemon = True  # Set the process as a daemon
         t1.start()
+        # run_setup(setup_path)
+        time.sleep(1)
 
     # TODO >>> Use the units order to setup the units one by one
     # TODO >>> Create a meachanism to verify the events when they are required
