@@ -46,43 +46,43 @@ pip install testrium
 
 ## **Why Testrium?**
 
-### **1. **Built for Complexity**
+### 1. **Built for Complexity**
 - **Probing and Validation**: **Testrium** excels in environments where traditional testing frameworks fall short, such as asynchronous, parallel, or interdependent scenarios. It provides tools to insert probes and validate system behavior in real-time.
 - **Sophisticated Setups**: Easily define complex setups, such as socket communication or multi-component integrations, without being constrained by traditional return-based configurations.
 
-### **2. **Dynamic Probes and Checks**
+### 2. **Dynamic Probes and Checks**
 - **Probes**: Integrate probes within your tests to capture and analyze specific events and state changes, offering detailed insights into system behavior and interactions.
 - **Validation Callbacks**: Utilize a flexible callback system to perform additional validation and cleanup during and after tests. This dynamic mechanism allows tests to adapt based on real-time results.
 
-### **3. **Efficient Parallel Execution**
+### 3. **Efficient Parallel Execution**
 - **Concurrent Testing**: Execute multiple tests in parallel to save time and simulate real-world scenarios where different components operate concurrently. **Testrium** manages parallel execution efficiently, ensuring accurate results.
 - **Coordinated Validation**: Validate complex interactions across multiple tests, ensuring system integrity and consistency under varied conditions.
 
-### **4. **Configurable and Adaptable**
+### 4. **Configurable and Adaptable**
 - **Config-Driven Design**: Customize test behavior, manage setups, and control execution through configuration files. **Testrium**’s design offers unmatched flexibility, aligning the testing environment precisely with your project’s needs.
 
 ## **Why Build from Scratch?**
 
-### **1. **Addressing Existing Limitations**
+### 1. **Addressing Existing Limitations**
 - **Traditional Tools**: Existing frameworks like `pytest` often lack the specialized capabilities required for probing and validating complex, event-driven systems.
 - **Innovative Features**: Developing **Testrium** from the ground up allows for the integration of advanced features such as dynamic probes and validation callbacks, free from the constraints of existing architectures.
 
-### **2. **Optimized for Modern Development**
+### 2. **Optimized for Modern Development**
 - **Focused Use Cases**: **Testrium** is tailored for scenarios involving asynchronous behaviors, parallel processes, and complex system interactions, where traditional tools may fall short.
 - **Future-Ready**: As software development evolves, **Testrium** is designed to adapt, ensuring it remains effective and relevant for new testing challenges.
 
 ## **Goals of Testrium**
 
-### **1. **Simplify Complex Testing**
+### 1. **Simplify Complex Testing**
 - Provide developers with intuitive tools for testing event-driven and asynchronous systems, reducing the complexity of advanced validation scenarios.
 
-### **2. **Enhance Test Coverage**
+### 2. **Enhance Test Coverage**
 - Enable comprehensive testing of interactions across components, improving the reliability and robustness of complex systems.
 
-### **3. **Promote Flexibility and Control**
+### 3. **Promote Flexibility and Control**
 - Offer a highly adaptable testing framework that aligns with diverse project requirements, allowing custom setups, validations, and test flows.
 
-### **4. **Accelerate Development Cycles**
+### 4. **Accelerate Development Cycles**
 - Facilitate efficient and effective testing processes that integrate seamlessly into modern development workflows, helping teams deliver high-quality software faster.
 
 ---
