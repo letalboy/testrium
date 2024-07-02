@@ -2,6 +2,7 @@ import os
 from posixpath import dirname
 import time
 import importlib.util
+import argparse
 import toml
 from colorama import init, Fore, Style
 from .modules.events import Events_Manager
@@ -121,8 +122,9 @@ def run_test(base_dir: str, dir_name: str, test_functions, extra_condition_fn):
 
         try:
             if test_name == "log_test_time":
-                with suppress_output():  # TODO >>> Create a CLI arg to disable it when want to show using -v
-                    test_func(dummy_function)  # Pass a dummy function if required
+                # with suppress_output(): 
+                #     test_func(dummy_function)  # Pass a dummy function if required
+                pass
             elif test_name == "verify_condition":
                 # TODO >>> Use this as a condition to verify if the requirements was completed for the test case
                 with suppress_output():
@@ -205,6 +207,11 @@ def call_tail_function(
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Testrium CLI')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Show logs')
+    
+    args = parser.parse_args()
+         
     base_dir = os.getcwd()
     print(f"{Fore.GREEN}Current working directory: {base_dir}")
 
@@ -253,9 +260,15 @@ def main():
 
         # > Run extra validation
         extra_condition_fn = special_functions["validate_test"]
-        all_tests_passed, tests_passed[f"{dir_name}"] = run_test(
-            base_dir, dir_name, test_functions, extra_condition_fn
-        )
+        if not args.verbose:
+            with suppress_output():
+                all_tests_passed, tests_passed[f"{dir_name}"] = run_test(
+                    base_dir, dir_name, test_functions, extra_condition_fn
+                )
+        else:
+            all_tests_passed, tests_passed[f"{dir_name}"] = run_test(
+                base_dir, dir_name, test_functions, extra_condition_fn
+            )        
 
         events_completed = []
         events_missing = []
