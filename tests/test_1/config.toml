@@ -4,4 +4,3 @@ units = ["Primary"]
 ["Primary"]
 init = 0
 events=["Test example completed"]
-in-except = "Resume" # Resume or Reload
