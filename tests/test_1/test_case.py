@@ -12,6 +12,11 @@ def test_example():
         step=f"Test example completed", event_type="Default"
     )
     
+    Events_Manager(Unit="Primary", path=THIS_DIR).Set_Event(
+        step=f"evento 1", event_type="Default"
+    )
+
+
     verify_condition(result == 2, "1 + 1 should be 2")
 
 # def test_failure():

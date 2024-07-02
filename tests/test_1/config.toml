@@ -3,4 +3,4 @@ units = ["Primary"]
 
 ["Primary"]
 init = 0
-events=["Test example completed"]
+events=["Test example completed", "evento 1"]
