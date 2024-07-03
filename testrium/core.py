@@ -16,6 +16,7 @@ from .common.utils import print_banner, suppress_output
 import pandas as pd
 from multiprocessing import Process, Event, Manager
 import sys
+from testrium.common.generator.main import resolve_template
 
 # Initialize colorama
 init(autoreset=True)
@@ -209,9 +210,18 @@ def call_tail_function(
 def main():
     parser = argparse.ArgumentParser(description='Testrium CLI')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show logs')
-    
+    subparsers = parser.add_subparsers(dest='command', help='Sub-command help')
+    run_parser = subparsers.add_parser('run', help='Run the tests')
+
+    gen_parser = subparsers.add_parser('gen', help='Generate already made templates')
+    gen_parser.add_argument('type', choices=["config-template"], help='Type of the template to generate')
+    gen_parser.add_argument('gen_path', help='Optional path for the generation')
     args = parser.parse_args()
-         
+
+    if args.command == "gen":
+        resolve_template(args.type, args.gen_path)
+        return
+    
     base_dir = os.getcwd()
     print(f"{Fore.GREEN}Current working directory: {base_dir}")
 
