@@ -225,14 +225,16 @@ def main():
     base_dir = os.getcwd()
     print(f"{Fore.GREEN}Current working directory: {base_dir}")
 
-    valid_test_dirs = discover_tests(base_dir)
+    valid_tests = discover_tests(base_dir)
 
     # -> Early retun if not find any test:
-    tests_finded = len(valid_test_dirs)
+    tests_finded = len(valid_tests)
     if tests_finded > 0:
         print(f"{Fore.GREEN} Find: {tests_finded:.0f} valid test groups!")
-        for test_group in valid_test_dirs:
-            print(f"{Fore.GREEN} - {test_group}")
+        for test_group in valid_tests:
+            print(f"{Fore.GREEN} - {test_group[0]}")
+            for unit in test_group[1]:
+                print(f"   {Fore.GREEN} - Unit {unit['name']}")
     else:
         print(f"{Fore.RED} No valid test groups finded!")
         return
@@ -242,7 +244,7 @@ def main():
     tests_passed = {}
 
     # -> Run the valid tests:
-    for dir_name in valid_test_dirs:
+    for dir_name, units in valid_tests:
         # TODO >>> Enhance the config loading to have a structure verification
         # TODO >>> Add option to disble a test if want to using somehting like enable: False for example
 
@@ -251,14 +253,14 @@ def main():
 
         # > Load Units
         confs = configs["Configs"]
-        units = confs["units"]
 
         # > Load Units Predefinitions
         total_units = 0
         units_index = {}
+
+        # TODO >>> Validate index of units, avoid duplicates - beqm
         for unit in units:
-            un = configs[f"{unit}"]
-            units_index[un["init"]] = {"name": f"{unit}", "events": f"{un['events']}"}
+            units_index[unit["init"]] = {"name": f"{unit['name']}", "events": f"{unit['events']}"}
             total_units += 1
 
         print(f"Units loaded: {units_index}")
@@ -298,14 +300,14 @@ def main():
                 .to_list()
             )
 
-            print(f"{unit_events}")
+            print(f"{Fore.BLUE} Unit {unit['name']}")
             for event in eval(unit["events"]):
-                print(f"Event: {event}")
                 if event not in unit_events:
-                    print(f"event: [{event}] was not completed!")
+                    print(f"   - {Fore.RED}{event} was not completed!")
                     events_missing.append(event)
                     all_tests_passed = False
                 else:
+                    print(f"   - {Fore.GREEN}{event} was sucessfully completed!")
                     events_completed.append(event)
                     continue
 
