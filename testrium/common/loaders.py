@@ -78,13 +78,19 @@ def load_special_callbakcs(dir_path):
     return special_callbacks
 
 
-def discover_tests(base_dir: str):
+def discover_tests(base_dir: str, exclude_tests: list):
     dir_names = os.listdir(base_dir)
     valid_tests = []
 
-
+                    
     # -> Discover valid test folders with configs inside
     for dir_name in dir_names:
+        if dir_name in exclude_tests:
+        # Se estiver na lista de exclusão, imprime uma mensagem informando que foi excluído
+         print(f"Excluded test directory: {dir_name}")
+        # Continua para o próximo diretório sem adicionar à lista de diretórios válidos
+         continue
+         
         dir_path = os.path.join(base_dir, dir_name)
 
         if "test" not in dir_name:

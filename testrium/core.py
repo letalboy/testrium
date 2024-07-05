@@ -210,6 +210,7 @@ def call_tail_function(
 def main():
     parser = argparse.ArgumentParser(description='Testrium CLI')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show logs')
+    parser.add_argument('--less', nargs='+', type=str, help='List of specific test names to exclude')
     subparsers = parser.add_subparsers(dest='command', help='Sub-command help')
     run_parser = subparsers.add_parser('run', help='Run the tests')
 
@@ -223,9 +224,21 @@ def main():
         return
     
     base_dir = os.getcwd()
+
+    exclude_tests = []
+        # Handle --less option
+    if args.less:
+        exclude_tests.extend(args.less)
+        print("Base Directory:", base_dir)
+        print("Excluded Tests:", args.less)
+
+    # Verbose mode
+    if args.verbose:
+        print("Verbose mode enabled")
+        
     print(f"{Fore.GREEN}Current working directory: {base_dir}")
 
-    valid_tests = discover_tests(base_dir)
+    valid_tests = discover_tests(base_dir, exclude_tests)
 
     # -> Early retun if not find any test:
     tests_finded = len(valid_tests)
