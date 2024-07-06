@@ -16,6 +16,7 @@ from .common.utils import print_banner, suppress_output
 import pandas as pd
 from multiprocessing import Process, Event, Manager
 import sys
+from testrium.common.generator.main import resolve_template
 
 # Initialize colorama
 init(autoreset=True)
@@ -209,20 +210,44 @@ def call_tail_function(
 def main():
     parser = argparse.ArgumentParser(description='Testrium CLI')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show logs')
-    
+    parser.add_argument('--less', nargs='+', type=str, help='List of specific test names to exclude')
+    subparsers = parser.add_subparsers(dest='command', help='Sub-command help')
+    run_parser = subparsers.add_parser('run', help='Run the tests')
+
+    gen_parser = subparsers.add_parser('gen', help='Generate already made templates')
+    gen_parser.add_argument('type', choices=["config-template"], help='Type of the template to generate')
+    gen_parser.add_argument('gen_path', help='Optional path for the generation')
     args = parser.parse_args()
-         
+
+    if args.command == "gen":
+        resolve_template(args.type, args.gen_path)
+        return
+    
     base_dir = os.getcwd()
+
+    exclude_tests = []
+        # Handle --less option
+    if args.less:
+        exclude_tests.extend(args.less)
+        print("Base Directory:", base_dir)
+        print("Excluded Tests:", args.less)
+
+    # Verbose mode
+    if args.verbose:
+        print("Verbose mode enabled")
+        
     print(f"{Fore.GREEN}Current working directory: {base_dir}")
 
-    valid_test_dirs = discover_tests(base_dir)
+    valid_tests = discover_tests(base_dir, exclude_tests)
 
     # -> Early retun if not find any test:
-    tests_finded = len(valid_test_dirs)
+    tests_finded = len(valid_tests)
     if tests_finded > 0:
         print(f"{Fore.GREEN} Find: {tests_finded:.0f} valid test groups!")
-        for test_group in valid_test_dirs:
-            print(f"{Fore.GREEN} - {test_group}")
+        for test_group in valid_tests:
+            print(f"{Fore.GREEN} - {test_group[0]}")
+            for unit in test_group[1]:
+                print(f"   {Fore.GREEN} - Unit {unit['name']}")
     else:
         print(f"{Fore.RED} No valid test groups finded!")
         return
@@ -232,7 +257,7 @@ def main():
     tests_passed = {}
 
     # -> Run the valid tests:
-    for dir_name in valid_test_dirs:
+    for dir_name, units in valid_tests:
         # TODO >>> Enhance the config loading to have a structure verification
         # TODO >>> Add option to disble a test if want to using somehting like enable: False for example
 
@@ -241,14 +266,14 @@ def main():
 
         # > Load Units
         confs = configs["Configs"]
-        units = confs["units"]
 
         # > Load Units Predefinitions
         total_units = 0
         units_index = {}
+
+        # TODO >>> Validate index of units, avoid duplicates - beqm
         for unit in units:
-            un = configs[f"{unit}"]
-            units_index[un["init"]] = {"name": f"{unit}", "events": f"{un['events']}"}
+            units_index[unit["init"]] = {"name": f"{unit['name']}", "events": f"{unit['events']}"}
             total_units += 1
 
         print(f"Units loaded: {units_index}")
@@ -288,14 +313,14 @@ def main():
                 .to_list()
             )
 
-            print(f"{unit_events}")
+            print(f"{Fore.BLUE} Unit {unit['name']}")
             for event in eval(unit["events"]):
-                print(f"Event: {event}")
                 if event not in unit_events:
-                    print(f"event: [{event}] was not completed!")
+                    print(f"   - {Fore.RED}{event} was not completed!")
                     events_missing.append(event)
                     all_tests_passed = False
                 else:
+                    print(f"   - {Fore.GREEN}{event} was sucessfully completed!")
                     events_completed.append(event)
                     continue
 
